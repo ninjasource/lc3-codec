@@ -1,8 +1,14 @@
 [package]
 name = "lc3-codec"
 version = "0.1.0"
-authors = ["David Haig <david@ninjametal.com>"]
+authors = ["David Haig"]
 edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/ninjasource/lc3-codec.git"
+description = "An implementation of the LC3 audio codec for embedded systems (no_std)"
+keywords = ["lc3", "audio", "embedded", "no_std"]
+categories = ["embedded", "no-std", "audio"]
+readme = "README.md"
 
 [dependencies]
 byteorder = { version = "1.3.4", default-features = false }
