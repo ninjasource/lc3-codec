@@ -1,0 +1,3 @@
+max_width = 120 # instead of 100
+#short_array_element_width_threshold = 20 # instead of 10 (formats arrays of large floats in a more compact way)
+short_array_element_width_threshold = 25 # instead of 10 (formats arrays of large floats in a more compact way)

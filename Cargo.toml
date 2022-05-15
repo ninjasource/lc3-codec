@@ -1,0 +1,26 @@
+[package]
+name = "lc3-codec"
+version = "0.1.0"
+authors = ["David Haig <david@ninjametal.com>"]
+edition = "2021"
+
+[dependencies]
+byteorder = { version = "1.3.4", default-features = false }
+heapless = { version = "0.7.10", default-features = false }
+itertools = { version = "0.10.3", default-features = false }
+num-traits = { version = "0.2.14", default-features = false, features = ["libm"] }
+log = { version = "0.4", default-features = false }
+fast-math = "0.1.1"
+bitvec = { version = "1.0.0", default-features = false } # seems to need an alloc
+
+[dev-dependencies]
+log = { version = "0.4", default-features = false }
+simple_logger = { version = "1.11.0", default-features = false }
+#criterion = "0.3"
+
+[profile.release]
+debug = true
+
+#[[bench]]
+#name = "modified_dct_decode"
+#harness = false
