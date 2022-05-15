@@ -1,3 +1,6 @@
+// Copyright (c) 2022 David Haig, Copyright (c) 2003-2010, Mark Borgerding. All rights reserved.
+// Ported to Rust from https://github.com/mborgerding/kissfft
+
 use super::complex::{Complex, Scaler};
 use core::f64::consts::PI;
 #[allow(unused_imports)]
