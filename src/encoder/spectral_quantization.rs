@@ -37,8 +37,7 @@ struct QuantizeResult {
     gg: Scaler,
 }
 
-pub struct SpectralQuantizationResult<'a> {
-    pub output: &'a [i16],
+pub struct SpectralQuantizationResult {
     pub gg_ind: i16,
     pub nbits_spec: usize,
     pub nbits_lsb: usize,
@@ -81,7 +80,10 @@ impl SpectralQuantization {
         nbits_bandwidth: usize,
         nbits_tns: usize,
         nbits_ltpf: usize,
-    ) -> SpectralQuantizationResult<'a> {
+    ) -> SpectralQuantizationResult {
+        assert_eq!(x_f.len(), self.ne);
+        assert_eq!(x_q.len(), self.ne);
+
         // bit budget
         let nbits_spec = self.calc_bit_budget(nbits, nbits_bandwidth, nbits_tns, nbits_ltpf);
 
@@ -105,7 +107,7 @@ impl SpectralQuantization {
         }
 
         SpectralQuantizationResult {
-            output: x_q,
+            //  output: x_q,
             gg_ind: gg.gg_ind,
             nbits_spec,
             nbits_lsb: quant.bit_consumption.nbits_lsb,
@@ -422,7 +424,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
-        assert_eq!(result.output, x_q_expected);
+        assert_eq!(x_q, x_q_expected);
         assert_eq!(result.gg, 24.7091141);
         assert_eq!(result.lastnz_trunc, 350);
         assert_eq!(result.lsb_mode, false);

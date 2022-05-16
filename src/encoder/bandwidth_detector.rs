@@ -24,6 +24,11 @@ pub struct BandwidthDetector {
     l: &'static [usize],
 }
 
+pub struct BandwidthDetectorResult {
+    pub bandwidth_ind: usize,
+    pub nbits_bandwidth: usize,
+}
+
 impl BandwidthDetector {
     pub fn new(frame_duration: FrameDuration, sample_freq_ind: usize) -> Self {
         let (i_bw_start, i_bw_stop, l) = match frame_duration {
@@ -56,10 +61,13 @@ impl BandwidthDetector {
     /// # Arguments
     ///
     /// * `e_b` - Input
-    pub fn run(&self, e_b: &[Scaler]) -> (usize, usize) {
+    pub fn run(&self, e_b: &[Scaler]) -> BandwidthDetectorResult {
         let nbits_bandwidth = NBITS_BW_TABLE[self.sample_freq_ind];
         if self.sample_freq_ind == 0 {
-            return (0, nbits_bandwidth);
+            return BandwidthDetectorResult {
+                bandwidth_ind: 0,
+                nbits_bandwidth,
+            };
         }
 
         // bandwidth index candidate
@@ -87,7 +95,10 @@ impl BandwidthDetector {
 
         // second stage - determine the final bandwidth
         if self.sample_freq_ind == bandwidth_ind {
-            (bandwidth_ind, nbits_bandwidth)
+            BandwidthDetectorResult {
+                bandwidth_ind,
+                nbits_bandwidth,
+            }
         } else {
             // detect an energy drop above the cut-off frequency of the candidate bandwidth bw_0
             let mut cutoff_max = 0.0;
@@ -102,9 +113,15 @@ impl BandwidthDetector {
             }
 
             if cutoff_max > CUTOFF_THRESH[bandwidth_ind] as Scaler {
-                (bandwidth_ind, nbits_bandwidth)
+                BandwidthDetectorResult {
+                    bandwidth_ind,
+                    nbits_bandwidth,
+                }
             } else {
-                (self.sample_freq_ind, nbits_bandwidth)
+                BandwidthDetectorResult {
+                    bandwidth_ind: self.sample_freq_ind,
+                    nbits_bandwidth,
+                }
             }
         }
     }
@@ -123,9 +140,9 @@ mod tests {
         #[rustfmt::skip]
         let e_b = [18782358.0, 38743940.0, 616163.4, 395644.22, 20441758.0, 31336932.0, 130985740.0, 116001040.0, 297851520.0, 52884070.0, 13922108.0, 1211718.9, 643103.44, 2697760.3, 1674064.1, 8157596.5, 11880675.0, 615179.8, 1548138.0, 15001.449, 72356.61, 424075.13, 339332.63, 9093.422, 118530.22, 106300.99, 93872.414, 103234.38, 129645.81, 12188.947, 48738.766, 124244.47, 12835.649, 47138.63, 10050.675, 24161.475, 15844.599, 16136.73, 37085.188, 5236.445, 14986.677, 10497.837, 8121.843, 2109.306, 3711.1233, 3116.423, 3749.5027, 4903.189, 3149.5522, 1745.0712, 1382.3269, 1555.3384, 994.6934, 1484.393, 888.5528, 926.9374, 639.82434, 801.4557, 743.6313, 487.39868, 681.486, 519.567, 481.0444, 454.6319];
 
-        let (bw, nbits_bandwidth) = detector.run(&e_b);
+        let result = detector.run(&e_b);
 
-        assert_eq!(bw, 4);
-        assert_eq!(nbits_bandwidth, 3);
+        assert_eq!(result.bandwidth_ind, 4);
+        assert_eq!(result.nbits_bandwidth, 3);
     }
 }

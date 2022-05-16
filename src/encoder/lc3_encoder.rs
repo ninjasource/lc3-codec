@@ -39,9 +39,11 @@ struct EncoderChannel<'a> {
     noise_level_estimation: NoiseLevelEstimation,
     bitstream_encoding: BitstreamEncoding,
     frame_index: usize,
+
+    // scratch buffers used anew for every frame (data from previous frames in these buffers is overwritten)
     energy_bands: &'a mut [Scaler],
-    output: &'a mut [Scaler],
-    x_q: &'a mut [i16],
+    mdct_out: &'a mut [Scaler],
+    spec_quant_out: &'a mut [i16],
     residual: ResidualBitsEncoder,
 }
 
@@ -51,10 +53,13 @@ impl<'a> EncoderChannel<'a> {
         let nbits = buf_out.len() * 8;
 
         // modified discrete cosine transform (mutates output and energy_bands)
-        let near_nyquist_flag = self.mdct.run(x_s, self.output, self.energy_bands);
+        let near_nyquist_flag = self.mdct.run(x_s, self.mdct_out, self.energy_bands);
+
+        // NOTE: the mdct above takes output[..nf] and transforms it to output[..ne] (e.g. 480 => 400)
+        let (spec_lines, _) = self.mdct_out.split_at_mut(self.config.ne);
 
         // bandwidth detector
-        let (bandwidth_ind, nbits_bandwidth) = self.bandwidth_detector.run(self.energy_bands);
+        let bandwidth = self.bandwidth_detector.run(self.energy_bands);
 
         // attack detector
         let attack_detected = self.attack_detector.run(x_s, buf_out.len());
@@ -62,22 +67,22 @@ impl<'a> EncoderChannel<'a> {
         // spectral noise shaping
         let sns = self
             .spectral_noise_shaping
-            .run(self.output, self.energy_bands, attack_detected);
+            .run(spec_lines, self.energy_bands, attack_detected);
 
         // temporal noise shaping
         let tns = self
             .temporal_noise_shaping
-            .run(sns.output, bandwidth_ind, nbits, near_nyquist_flag);
+            .run(spec_lines, bandwidth.bandwidth_ind, nbits, near_nyquist_flag);
 
         // long term post filter
         let post_filter = self.long_term_post_filter.run(x_s, near_nyquist_flag, nbits);
 
         // spectral quantization
         let spec = self.spectral_quantization.run(
-            tns.output,
-            self.x_q,
+            spec_lines,
+            self.spec_quant_out,
             nbits,
-            nbits_bandwidth,
+            bandwidth.nbits_bandwidth,
             tns.nbits_tns,
             post_filter.nbits_ltpf,
         );
@@ -88,75 +93,29 @@ impl<'a> EncoderChannel<'a> {
             spec.nbits_trunc,
             self.config.ne,
             spec.gg,
-            tns.output,
-            spec.output,
+            spec_lines,
+            self.spec_quant_out,
         );
 
         // noise level estimation
-        let noise_factor =
-            self.noise_level_estimation
-                .calc_noise_factor(tns.output, spec.output, bandwidth_ind, spec.gg as Scaler);
-
-        // bitstream encoding
-        self.bitstream_encoding.init(buf_out);
-
-        // side information
-        self.bitstream_encoding
-            .bandwidth(bandwidth_ind, self.bandwidth_detector.get_num_bits_bandwidth(), buf_out);
-        self.bitstream_encoding.last_non_zero_tuple(spec.lastnz_trunc, buf_out);
-        self.bitstream_encoding.lsb_mode_bit(spec.lsb_mode, buf_out);
-        self.bitstream_encoding.global_gain(spec.gg_ind as usize, buf_out);
-        self.bitstream_encoding
-            .tns_activation_flag(tns.num_tns_filters, &tns.rc_order, buf_out);
-        self.bitstream_encoding
-            .pitch_present_flag(post_filter.pitch_present, buf_out);
-
-        // encode SCF VQ parameters - 1st stage (10 bits)
-        self.bitstream_encoding
-            .encode_scf_vq_1st_stage(sns.ind_lf, sns.ind_hf, buf_out);
-
-        // encode SCF VQ parameters - 2nd stage side-info (3-4 bits) and MPVQ data
-        self.bitstream_encoding.encode_scf_vq_2nd_stage(
-            sns.shape_j,
-            sns.gind,
-            sns.ls_inda as usize,
-            sns.index_joint_j,
-            buf_out,
+        let noise_factor = self.noise_level_estimation.calc_noise_factor(
+            spec_lines,
+            self.spec_quant_out,
+            bandwidth.bandwidth_ind,
+            spec.gg as Scaler,
         );
 
-        if post_filter.pitch_present {
-            self.bitstream_encoding
-                .ltpf_data(post_filter.ltpf_active, post_filter.pitch_index, buf_out);
-        }
-
-        self.bitstream_encoding.noise_factor(noise_factor, buf_out);
-
-        // arithmetic encoding
-        self.bitstream_encoding.ac_enc_init();
-
-        // tns data
-        self.bitstream_encoding.tns_data(
-            tns.lpc_weighting,
-            tns.num_tns_filters,
-            &tns.rc_order,
-            &tns.rc_i,
+        self.bitstream_encoding.encode(
+            bandwidth,
+            sns,
+            tns,
+            post_filter,
+            spec,
+            residual_bits,
+            noise_factor,
+            self.spec_quant_out,
             buf_out,
         );
-
-        // spectral data
-        // TODO (theirs) check whether the degenerated case with nlsbs==0 works
-        self.bitstream_encoding.spectral_data(
-            spec.lastnz_trunc,
-            spec.rate_flag,
-            spec.lsb_mode,
-            spec.output,
-            spec.nbits_lsb,
-            buf_out,
-        );
-
-        // residual data and finalization
-        self.bitstream_encoding
-            .residual_data_and_finalization(spec.lsb_mode, residual_bits, buf_out);
 
         Ok(())
     }
@@ -202,11 +161,11 @@ impl<'a, const NUM_CHANNELS: usize> Lc3Encoder<'a, NUM_CHANNELS> {
                 noise_level_estimation,
                 bitstream_encoding,
                 frame_index: 0,
-                output,
+                mdct_out: output,
                 energy_bands,
                 residual,
                 config,
-                x_q,
+                spec_quant_out: x_q,
             };
 
             channels.push(channel).ok();

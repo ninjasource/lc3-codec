@@ -1,59 +1,20 @@
 # lc3-codec
 
-Low Complexity Communication Codec. This is an audio codec targeting `no_std` environments.
+Low Complexity Communication Codec. This is an implementation of the the Bluetooth(r) LC3 Audio Codec revision 1.0 (released on 2020-09-15) targeting `no_std` environments. 
+
+This is not currently approved or verified in any formal way other than my own testing against a codec that has been validated. Both encoding and decoding are working for some music I have thrown at it. The music files have not been included in this repo for copyright reasons.
 
 To start take a look at the `lc3_decoder.rs` and `lc3_encoder.rs` files.
 
-## Lines of code
+## Introduction
 
-To check lines of code run:
-```
-loc --exclude ./tables/*
-```
+The purpose of this codebase is to show how a modern audio codec works. It was written to run on an embedded mcu so the API may seem a little awkward because you have to pass in preallocated memory. My background is not in signal processing and I wanted to create a codebase that someone like me could read and understand. This is why I try to avoid the shorthand variable and method names you may see in similar implementations. The excessive commenting is for my benefit and for those with less experience in signal processing. 
+
+The codebase is very much a work in progress and I am actively working on performance enhancements and general simplification of anything that looks confusing.
 
 ## Unit tests
 
-The unit tests in place right now are primarily here to facilitate a major refactoring effort by helping me identify refactors with material changes to the input and output data. Basically I don't want to break things and this helps with that. More granular and useful tests will come as soon as the codebase stabilizes a little.
-
-## Profiling
-
-To setup follow instructions here:
-https://github.com/flamegraph-rs/flamegraph
-Note that the debug symbols should be included in release mode and you should only profile release builds
-
-```
-# Cargo.toml
-[profile.release]
-debug = true
-```
-
-To run:
-
-Use flamegraph directly:
-```
-# enable unprivileged profiling
-echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid
-
-# record performance stats for the decode binary
-flamegraph -o flamegraph.svg ./target/release/decode
-flamegraph -o flamegraph.svg ./target/release/examples/spectral_noise_shaping_decode
-
-# disable unprivileged profiling (for security reasons)
-echo 3 | sudo tee /proc/sys/kernel/perf_event_paranoid
-```
-
-or use cargo-flamegraph for more advanced features (andd no need to change `perf_event_paranoid`):
-```
-cargo flamegraph -c "record -e instructions -c 100 --call-graph lbr -g" --example decode --root
-
-cargo flamegraph --bench modified_dct_decode --root -- --bench
-
-cargo flamegraph -c "record -e instructions -c 100 --call-graph lbr -g" --example mdct_decode --root
-
-cargo flamegraph -c "record -e instructions -c 100 --call-graph lbr -g" --example mdct_decode --root
-
-
-```
+The unit tests in place right now are primarily here to facilitate refactoring by helping me identify changes with material effects to the input and output data. Basically I don't want to break things and this helps with that. More granular and useful tests will come as soon as the codebase stabilizes a little.
 
 # License
 

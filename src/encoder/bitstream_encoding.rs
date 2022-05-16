@@ -1,4 +1,9 @@
-use super::buffer_writer::BufferWriter;
+use super::{
+    bandwidth_detector::BandwidthDetectorResult, buffer_writer::BufferWriter,
+    long_term_post_filter::LongTermPostFilterResult, residual_spectrum::ResidualBits,
+    spectral_noise_shaping::SnsResult, spectral_quantization::SpectralQuantizationResult,
+    temporal_noise_shaping::TnsResult,
+};
 use crate::tables::{spec_noise_shape_quant_tables::*, spectral_data_tables::*, temporal_noise_shaping_tables::*};
 use heapless::Vec;
 
@@ -69,7 +74,68 @@ impl BitstreamEncoding {
         nbits_ari as usize
     }
 
-    pub fn init(&mut self, bytes: &mut [u8]) {
+    pub fn encode<'a>(
+        &mut self,
+        bandwidth: BandwidthDetectorResult,
+        sns: SnsResult,
+        tns: TnsResult,
+        post_filter: LongTermPostFilterResult,
+        spec: SpectralQuantizationResult,
+        residual_bits: ResidualBits<'a>,
+        noise_factor: usize,
+        spec_output: &[i16],
+        buf_out: &mut [u8],
+    ) {
+        // bitstream encoding
+        self.init(buf_out);
+
+        // side information
+        self.bandwidth(bandwidth.bandwidth_ind, bandwidth.nbits_bandwidth, buf_out);
+        self.last_non_zero_tuple(spec.lastnz_trunc, buf_out);
+        self.lsb_mode_bit(spec.lsb_mode, buf_out);
+        self.global_gain(spec.gg_ind as usize, buf_out);
+        self.tns_activation_flag(tns.num_tns_filters, &tns.rc_order, buf_out);
+        self.pitch_present_flag(post_filter.pitch_present, buf_out);
+
+        // encode SCF VQ parameters - 1st stage
+        self.encode_scf_vq_1st_stage(sns.ind_lf, sns.ind_hf, buf_out);
+
+        // encode SCF VQ parameters - 2nd stage
+        self.encode_scf_vq_2nd_stage(sns.shape_j, sns.gind, sns.ls_inda as usize, sns.index_joint_j, buf_out);
+
+        if post_filter.pitch_present {
+            self.ltpf_data(post_filter.ltpf_active, post_filter.pitch_index, buf_out);
+        }
+
+        self.noise_factor(noise_factor, buf_out);
+
+        // arithmetic encoding
+        self.ac_enc_init();
+
+        // tns data
+        self.tns_data(
+            tns.lpc_weighting,
+            tns.num_tns_filters,
+            &tns.rc_order,
+            &tns.rc_i,
+            buf_out,
+        );
+
+        // spectral data
+        self.spectral_data(
+            spec.lastnz_trunc,
+            spec.rate_flag,
+            spec.lsb_mode,
+            spec_output,
+            spec.nbits_lsb,
+            buf_out,
+        );
+
+        // residual data and finalization
+        self.residual_data_and_finalization(spec.lsb_mode, residual_bits, buf_out);
+    }
+
+    fn init(&mut self, bytes: &mut [u8]) {
         self.nbytes = bytes.len();
         self.nbits = self.nbytes * 8;
         self.writer = BufferWriter::new(bytes.len());
@@ -77,61 +143,58 @@ impl BitstreamEncoding {
         self.nlsbs = 0;
     }
 
-    pub fn bandwidth(&mut self, p_bw: usize, nbits_bw: usize, bytes: &mut [u8]) {
+    fn bandwidth(&mut self, p_bw: usize, nbits_bw: usize, bytes: &mut [u8]) {
         if nbits_bw > 0 {
             self.write_uint_backward(p_bw, nbits_bw, bytes);
         }
     }
 
-    pub fn last_non_zero_tuple(&mut self, lastnz_trunc: usize, bytes: &mut [u8]) {
+    fn last_non_zero_tuple(&mut self, lastnz_trunc: usize, bytes: &mut [u8]) {
         let value = (lastnz_trunc >> 1) - 1;
         let num_bits = (self.ne as f64 / 2.0).log2().ceil() as usize;
         self.write_uint_backward(value, num_bits, bytes)
     }
 
-    pub fn lsb_mode_bit(&mut self, lsb_mode: bool, bytes: &mut [u8]) {
+    fn lsb_mode_bit(&mut self, lsb_mode: bool, bytes: &mut [u8]) {
         self.write_bool_backward(lsb_mode, bytes)
     }
 
-    pub fn global_gain(&mut self, gg_ind: usize, bytes: &mut [u8]) {
+    fn global_gain(&mut self, gg_ind: usize, bytes: &mut [u8]) {
         self.write_uint_backward(gg_ind, 8, bytes)
     }
 
-    pub fn tns_activation_flag(&mut self, num_tns_filters: usize, rc_order: &[usize], bytes: &mut [u8]) {
+    fn tns_activation_flag(&mut self, num_tns_filters: usize, rc_order: &[usize], bytes: &mut [u8]) {
         for rc_order_f in rc_order[..num_tns_filters].iter() {
             let value = *rc_order_f != 0;
             self.write_bool_backward(value, bytes);
         }
     }
 
-    pub fn pitch_present_flag(&mut self, pitch_present: bool, bytes: &mut [u8]) {
+    fn pitch_present_flag(&mut self, pitch_present: bool, bytes: &mut [u8]) {
         self.write_bool_backward(pitch_present, bytes)
     }
 
-    pub fn encode_scf_vq_1st_stage(&mut self, ind_lf: usize, ind_hf: usize, bytes: &mut [u8]) {
+    fn encode_scf_vq_1st_stage(&mut self, ind_lf: usize, ind_hf: usize, bytes: &mut [u8]) {
         self.write_uint_backward(ind_lf, 5, bytes);
         self.write_uint_backward(ind_hf, 5, bytes);
     }
 
-    pub fn encode_scf_vq_2nd_stage(
+    fn encode_scf_vq_2nd_stage(
         &mut self,
         shape_j: usize,
         gain_i: usize,
-        ls_inda: usize, // the type of this is strange over all code places -> finally only one bit is stored!
+        ls_inda: usize,
         index_joint_j: usize,
         bytes: &mut [u8],
     ) {
-        /* Encode SCF VQ parameters - 2nd stage side-info (3-4 bits) */
         let submode_msb = (shape_j >> 1) != 0;
         self.write_bool_backward(submode_msb, bytes);
-        //uint8_t submode_LSB = (shape_j & 0x1); /* shape_j is the stage2 shape_index [0…3] */
         let gain_msbs_num_bits = SNS_GAIN_MSB_BITS[shape_j];
-        let gain_msbs = gain_i >> SNS_GAIN_LSB_BITS[shape_j]; /* where gain_i is the SNS-VQ stage 2 gain_index */
+        let gain_msbs = gain_i >> SNS_GAIN_LSB_BITS[shape_j];
         self.write_uint_backward(gain_msbs, gain_msbs_num_bits, bytes);
         let ls_inda_flag = ls_inda != 0;
         self.write_bool_backward(ls_inda_flag, bytes);
 
-        /* Encode SCF VQ parameters - 2nd stage MPVQ data */
         if !submode_msb {
             self.write_uint_backward(index_joint_j, 13, bytes);
             self.write_uint_backward(index_joint_j >> 13, 12, bytes);
@@ -190,7 +253,6 @@ impl BitstreamEncoding {
         bytes: &mut [u8],
     ) {
         self.nbits_side_initial = self.nbits_side_written();
-        // self.lsbs = [0; nbits_lsb]; // store this pointer for subsequent use in residualDataAndFinalization
         self.lsbs.clear();
         for _ in 0..nbits_lsb {
             self.lsbs.push(0).unwrap();
@@ -229,35 +291,28 @@ impl BitstreamEncoding {
             let cum_freq = AC_SPEC_CUMFREQ[pki][sym];
             let sym_freq = AC_SPEC_FREQ[pki][sym];
             self.ac_encode(cum_freq, sym_freq, bytes);
-            //a_lsb = abs(𝑋𝑞[k]); -> implemented earlier
-            //b_lsb = abs(𝑋𝑞[k+1]); -> implemented earlier
+
             if lsb_mode && lev > 0 {
                 a_lsb >>= 1;
                 b_lsb >>= 1;
 
                 self.lsbs[self.nlsbs] = lsb0;
                 self.nlsbs += 1;
-                //if (a_lsb == 0 && 𝑋𝑞[k] != 0)
                 if a_lsb == 0 && x_q[k] != 0 {
-                    //lsbs[nlsbs++] = 𝑋𝑞[k]>0?0:1;
                     self.lsbs[self.nlsbs] = if x_q[k] > 0 { 0 } else { 1 };
                     self.nlsbs += 1;
                 }
                 self.lsbs[self.nlsbs] = lsb1;
                 self.nlsbs += 1;
-                //if (b_lsb == 0 && 𝑋𝑞[k+1] != 0)
                 if b_lsb == 0 && x_q[k + 1] != 0 {
-                    //lsbs[nlsbs++] = 𝑋𝑞[k+1]>0?0:1;
                     self.lsbs[self.nlsbs] = if x_q[k + 1] > 0 { 0 } else { 1 };
                     self.nlsbs += 1;
                 }
             }
             if a_lsb > 0 {
-                // 𝑋_q[k] > 0 ? 0 : 1
                 self.write_bool_backward(x_q[k] <= 0, bytes);
             }
             if b_lsb > 0 {
-                // 𝑋_q[k + 1] > 0 ? 0 : 1
                 self.write_bool_backward(x_q[k + 1] <= 0, bytes);
             }
             lev = lev.min(3);
@@ -405,7 +460,6 @@ mod tests {
 
         bitstream_encoding.init(&mut buf_out);
 
-        // 3.3.13.3 Side information  (d09r02_F2F)
         bitstream_encoding.bandwidth(4, 3, &mut buf_out);
 
         bitstream_encoding.last_non_zero_tuple(350, &mut buf_out);
@@ -416,11 +470,8 @@ mod tests {
         let pitch_present = true;
         bitstream_encoding.pitch_present_flag(pitch_present, &mut buf_out);
 
-        // Encode SCF VQ parameters - 1st stage (10 bits)
         bitstream_encoding.encode_scf_vq_1st_stage(8, 17, &mut buf_out);
 
-        // Encode SCF VQ parameters - 2nd stage side-info (3-4 bits)
-        // Encode SCF VQ parameters - 2nd stage MPVQ data
         bitstream_encoding.encode_scf_vq_2nd_stage(3, 0, 0, 15253432, &mut buf_out);
 
         if pitch_present {
@@ -429,15 +480,11 @@ mod tests {
 
         bitstream_encoding.noise_factor(6, &mut buf_out);
 
-        // 3.3.13.4 Arithmetic encoding  (d09r02_F2F)
-        // Arithmetic Encoder Initialization
         bitstream_encoding.ac_enc_init();
-        // TNS data
+
         let rc_i = [10, 7, 8, 9, 7, 9, 8, 9, 14, 11, 6, 9, 7, 9, 8, 8];
         bitstream_encoding.tns_data(0, 2, &rc_order, &rc_i, &mut buf_out);
 
-        // Spectral data
-        // TODO (theirs) check whether the degenerated case with nlsbs==0 works
         let x_q = [
             102, -146, -18, -14, -104, -128, 264, 254, -417, -180, 94, -28, 20, -38, 21, -62, -125, 10, -15, -4, 27,
             -9, -4, 3, 3, -1, 0, -13, -2, 0, -11, 3, 5, 4, -10, -18, -22, 4, 10, -5, 17, 4, -6, 2, 6, 11, -3, -3, 29,
@@ -455,16 +502,6 @@ mod tests {
         ];
         bitstream_encoding.spectral_data(350, 512, false, &x_q, 107, &mut buf_out);
 
-        // 3.3.13.5 Residual data and finalization  (d09r02_F2F)
-
-        /*
-        let res_bits = [
-            0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1,
-            1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1,
-            1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1,
-            1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
-        ];*/
-        //let res_bits: [bool; 140] = res_bits.map(|x| x == 1).iter().collect::<Vec<bool, 140>>();
         let res_bits = [
             false, true, false, false, false, false, true, true, false, true, false, true, true, true, true, false,
             false, true, false, true, true, true, false, true, true, true, false, true, false, true, true, true, false,

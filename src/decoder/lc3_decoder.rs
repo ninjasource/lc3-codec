@@ -127,14 +127,6 @@ impl<'a> DecoderChannel<'a> {
         // 2.288 ms
         self.modified_dct.run(self.spec_lines, self.freq_samples);
 
-        /*
-        if long_term_post_filter_info.is_active {
-            log::info!(
-                "long_term_post_filter_info.is_active at frame_index: {}",
-                self.frame_index
-            );
-        }*/
-
         // 0.152 ms (from 0.122 ms)
         self.post_filter
             .run(&long_term_post_filter_info, nbits, self.freq_samples);
@@ -159,37 +151,6 @@ fn read_frame(buf: &[u8], config: &Lc3Config, x: &mut [i32]) -> Result<(SideInfo
     // 0.274 ms
     let side_info =
         side_info_reader::read(buf, &mut reader, config.fs_ind, config.ne).map_err(Lc3DecoderError::SideInfo)?;
-
-    /*
-    let long_term_post_filter_info = LongTermPostFilterInfo {
-        is_active: false,
-        pitch_index: 0,
-        pitch_present: false,
-    };
-    let sns_vq = SnsVq {
-        g_ind: 0,
-        idx_a: 1718290,
-        idx_b: 2,
-        ind_hf: 4,
-        ind_lf: 13,
-        ls_inda: 1,
-        ls_indb: 0,
-        submode_lsb: 0,
-        submode_msb: 0,
-    };
-    let side_info = SideInfo {
-        bandwidth: Bandwidth::FullBand,
-        lastnz: 400,
-        lsb_mode: false,
-        gg_ind: 204,
-        num_tns_filters: 2,
-        rc_order: [1, 0],
-        sns_vq,
-        long_term_post_filter_info,
-        f_nf: 3,
-    };
-
-    let mut reader = BufferReader::new_at(0, 64); */
 
     let arithmetic_data =
         arithmetic_codec::decode(buf, &mut reader, config.fs_ind, config.ne, &side_info, &config.n_ms, x)

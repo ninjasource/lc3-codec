@@ -43,6 +43,7 @@ impl AttackDetector {
 
     // NOTE that nbytes is the number of bytes of the end compressed audio (not the input audio x_s)
     pub fn run(&mut self, x_s: &[i16], nbytes: usize) -> bool {
+        assert_eq!(x_s.len(), self.config.nf);
         if !self.is_active(nbytes) {
             self.energy_last = 0.0;
             self.max_energy_last = 0.0;
