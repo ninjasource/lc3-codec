@@ -1,7 +1,6 @@
 pub mod attack_detector;
 pub mod bandwidth_detector;
 pub mod bitstream_encoding;
-// pub mod buffer_writer_alt;
 pub mod buffer_writer;
 pub mod lc3_encoder;
 pub mod long_term_post_filter;

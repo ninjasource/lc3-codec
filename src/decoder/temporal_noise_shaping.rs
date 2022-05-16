@@ -187,12 +187,7 @@ mod tests {
         ];
 
         apply_temporal_noise_shaping(
-            duration,
-            bandwidth,
-            num_tns_filters,
-            &reflect_coef_order,
-            &reflect_coef_ints,
-            &mut spec_lines,
+            duration, bandwidth, num_tns_filters, &reflect_coef_order, &reflect_coef_ints, &mut spec_lines,
         );
 
         #[rustfmt::skip]
