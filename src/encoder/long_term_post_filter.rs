@@ -144,7 +144,7 @@ impl<'a> LongTermPostFilter<'a> {
         // time domain signals
         self.shift_out_old_samples(x_s);
 
-        // resampling (TODO: go over this again)
+        // resampling (TODO: go over this again) - it is very slow
         let x_12p8 = &mut self.x_tilde_12p8d_extended[self.delay_ltpf + NMEM_12P8D..];
         for (n, x_12p8_n) in x_12p8[..self.len12p8].iter_mut().enumerate() {
             *x_12p8_n = 0.0;
@@ -358,7 +358,6 @@ impl<'a> LongTermPostFilter<'a> {
         (pitch_index, pitch_int, pitch_fr)
     }
 
-    // this function mutates self.ltpf_active
     fn activation_bit(
         &self,
         pitch_int: usize,

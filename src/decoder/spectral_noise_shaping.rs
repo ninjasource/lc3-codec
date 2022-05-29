@@ -48,11 +48,11 @@ pub fn decode(config: &Lc3Config, sns: &SnsVq, spec_lines: &mut [Scaler]) {
     };
 
     // unit energy normalization of the received shape
-    let mut y_norm = 0.0;
-    for val in y.iter().take(16) {
-        y_norm += *val as Scaler * *val as Scaler;
-    }
-    y_norm = y_norm.sqrt();
+    let y_norm = y[..16]
+        .iter()
+        .map(|x| *x as Scaler * *x as Scaler)
+        .sum::<Scaler>()
+        .sqrt();
 
     // reconstruction of the quantized sns scale factors - lookup adjustment gain candidates
     let mut quant_adj_gain = match shape_j {

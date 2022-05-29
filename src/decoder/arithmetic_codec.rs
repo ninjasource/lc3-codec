@@ -137,11 +137,12 @@ pub fn decode(
     let residual_bits = decode_residual_bits(buf, reader, side_info, &st, nbits, ne, x, &mut save_lev)?;
 
     // noise filling seed
-    let mut tmp = 0;
-    for (k, item) in x[..ne].iter().enumerate() {
-        tmp += item.abs() * k as i32;
-    }
-    let noise_filling_seed = (tmp as i32) & 0xFFFF;
+    let noise_filling_seed = x[..ne]
+        .iter()
+        .enumerate()
+        .map(|(k, item)| item.abs() * k as i32)
+        .sum::<i32>()
+        & 0xFFFF;
 
     // zero frame flag
     let is_zero_frame = side_info.lastnz == 2 && x[0] == 0 && x[1] == 0 && side_info.global_gain_index == 0;

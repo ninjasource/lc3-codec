@@ -9,7 +9,7 @@
                 "args": [
                     "build",
                     "--example",
-                    "encode"
+                    "decode"
                 ]
             },
             "args": [],

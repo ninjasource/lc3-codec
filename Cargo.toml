@@ -22,10 +22,14 @@ bitvec = { version = "1.0.0", default-features = false } # seems to need an allo
 [dev-dependencies]
 log = { version = "0.4", default-features = false }
 simple_logger = { version = "1.11.0", default-features = false }
-#criterion = "0.3"
+
+# this is for benchmarking
+# criterion = "0.3"
 
 [profile.release]
 debug = true
+codegen-units = 1 # better optimizations
+lto = true # better optimizations
 
 #[[bench]]
 #name = "modified_dct_decode"

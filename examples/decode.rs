@@ -50,8 +50,8 @@ fn decode_lc3_to_wav(
     let config = Lc3Config::new(sampling_frequency, frame_duration, num_channels);
 
     let (scaler_length, complex_length) = Lc3Decoder::<2>::calc_working_buffer_lengths(&config);
-    let mut scaler_buf = vec![0.0; scaler_length];
-    let mut complex_buf = vec![Complex::new(0., 0.); complex_length];
+    let mut scaler_buf = vec![0.0; scaler_length]; // 9942
+    let mut complex_buf = vec![Complex::new(0., 0.); complex_length]; // 1920
 
     let num_bytes_per_channel = num_bytes_per_channel; // 150 = 240 kbps for 2 channels, 120 kbps for 1 channel
     let mut decoder = Lc3Decoder::<2>::new(config.clone(), &mut scaler_buf, &mut complex_buf);

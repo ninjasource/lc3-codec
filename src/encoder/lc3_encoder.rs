@@ -74,7 +74,7 @@ impl<'a> EncoderChannel<'a> {
             .temporal_noise_shaping
             .run(spec_lines, bandwidth.bandwidth_ind, nbits, near_nyquist_flag);
 
-        // long term post filter
+        // long term post filter - half the time spent here
         let post_filter = self.long_term_post_filter.run(x_s, near_nyquist_flag, nbits);
 
         // spectral quantization
@@ -194,6 +194,7 @@ impl<'a, const NUM_CHANNELS: usize> Lc3Encoder<'a, NUM_CHANNELS> {
         }
     }
 
+    // (integer, scaler, complex)
     pub fn calc_working_buffer_lengths(config: &Lc3Config) -> (usize, usize, usize) {
         let (mdct_integer_len, mdct_complex_len) = ModDiscreteCosTrans::calc_working_buffer_lengths(config);
         let (ltpf_integer_len, ltpf_scaler_len) = LongTermPostFilter::calc_working_buffer_length(config);
