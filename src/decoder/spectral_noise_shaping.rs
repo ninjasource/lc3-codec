@@ -248,7 +248,6 @@ mod tests {
             nb: 64,
             // not used below here
             fs: 0,
-            nc: 0,
             ne: 0,
             nf: 0,
             z: 0,

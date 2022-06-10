@@ -659,7 +659,7 @@ mod tests {
         use super::SpectralNoiseShaping;
         use crate::common::config::{FrameDuration, Lc3Config, SamplingFrequency};
 
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         const I_FS: [usize; 65] = [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 39,
             42, 45, 48, 51, 55, 59, 63, 67, 71, 76, 81, 86, 92, 98, 105, 112, 119, 127, 135, 144, 154, 164, 175, 186,

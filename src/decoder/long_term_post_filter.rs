@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn long_term_post_filter_activated() {
         let mut scaler_buf = [0.; 3000];
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let (mut post_filter, _) = LongTermPostFilter::new(config, &mut scaler_buf);
         #[rustfmt::skip]
         let mut freq_samples = [
@@ -493,7 +493,7 @@ mod tests {
     #[test]
     fn long_term_post_filter_full_cycle() {
         let mut scaler_buf = [0.; 3000];
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let (mut post_filter, _) = LongTermPostFilter::new(config, &mut scaler_buf);
 
         // Inactive - transition case 1

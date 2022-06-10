@@ -16,9 +16,6 @@ pub enum FrameDuration {
 
 #[derive(Clone, Copy)]
 pub struct Lc3Config {
-    /// Number of channels (e.g. 2)
-    pub nc: usize,
-
     /// Sampling frequency index (e.g. 4)
     pub fs_ind: usize,
 
@@ -42,7 +39,7 @@ pub struct Lc3Config {
 }
 
 impl Lc3Config {
-    pub fn new(sampling_frequency: SamplingFrequency, frame_duration: FrameDuration, num_channels: usize) -> Self {
+    pub fn new(sampling_frequency: SamplingFrequency, frame_duration: FrameDuration) -> Self {
         let (fs_ind, fs) = match sampling_frequency {
             SamplingFrequency::Hz8000 => (0, 8000),
             SamplingFrequency::Hz16000 => (1, 16000),
@@ -96,7 +93,6 @@ impl Lc3Config {
             fs,
             n_ms: frame_duration,
             nb,
-            nc: num_channels,
             ne,
             nf,
             z,
@@ -111,10 +107,9 @@ mod tests {
 
     #[test]
     fn simple_config() {
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
 
         assert_eq!(config.fs, 48000);
-        assert_eq!(config.nc, 1);
         assert_eq!(config.fs_ind, 4);
         assert_eq!(config.n_ms, FrameDuration::TenMs);
         assert_eq!(config.z, 180);

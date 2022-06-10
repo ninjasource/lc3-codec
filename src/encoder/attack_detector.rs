@@ -165,7 +165,7 @@ mod tests {
             2169, 2193, 2213, 2219, 2202, 2163, 2101, 2033, 1992, 1985, 1990, 1986, 1978, 1977, 1976, 1969, 1959, 1956,
             1960, 1955, 1930, 1907, 1884, 1844, 1790, 1733, 1687, 1649, 1611, 1586,
         ];
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let mut detector = AttackDetector::new(config);
 
         let attack_detected = detector.run(&x_s, 150);

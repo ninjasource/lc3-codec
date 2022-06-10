@@ -47,7 +47,7 @@ fn decode_lc3_to_wav(
     file.read_to_end(&mut buf_in_full)?;
     info!("Read {} bytes from file", buf_in_full.len());
 
-    let config = Lc3Config::new(sampling_frequency, frame_duration, num_channels);
+    let config = Lc3Config::new(sampling_frequency, frame_duration);
 
     let (scaler_length, complex_length) = Lc3Decoder::<2>::calc_working_buffer_lengths(&config);
     let mut scaler_buf = vec![0.0; scaler_length]; // 9942
@@ -59,8 +59,8 @@ fn decode_lc3_to_wav(
     let mut in_cursor = 0;
     let mut out_cursor = FULL_WAV_HEADER_LEN;
 
-    let mut samples_out_by_channel = vec![vec![0_i16; config.nf]; config.nc];
-    let mut samples_out_interleved = vec![0_i16; config.nc * config.nf];
+    let mut samples_out_by_channel = vec![vec![0_i16; config.nf]; num_channels];
+    let mut samples_out_interleved = vec![0_i16; num_channels * config.nf];
 
     let mut new_wav_file = File::create(wav_file_name)?;
     let bits_per_sample = 16;
@@ -78,7 +78,7 @@ fn decode_lc3_to_wav(
     let mut wav_header_buffer = vec![0; 256];
     let len = wav::write_header(&wav_header, &mut wav_header_buffer)?;
     new_wav_file.write_all(&wav_header_buffer[..len])?;
-    let mut buf_out = vec![0; config.nc * config.nf * num_bits_per_audio_sample / 8];
+    let mut buf_out = vec![0; num_channels * config.nf * num_bits_per_audio_sample / 8];
 
     let mut frame_index = 0;
     loop {
@@ -89,7 +89,7 @@ fn decode_lc3_to_wav(
             info!("Decoding frame: {}", frame_index);
         }
 
-        for channel_index in 0..config.nc {
+        for channel_index in 0..num_channels {
             if in_cursor >= buf_in_full.len() {
                 return Ok(());
             }
@@ -111,8 +111,8 @@ fn decode_lc3_to_wav(
         }
 
         for i in 0..config.nf {
-            for ch in 0..config.nc {
-                samples_out_interleved[i * config.nc + ch] = samples_out_by_channel[ch][i];
+            for ch in 0..num_channels {
+                samples_out_interleved[i * num_channels + ch] = samples_out_by_channel[ch][i];
             }
         }
 

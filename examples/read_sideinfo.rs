@@ -29,24 +29,22 @@ fn main() -> Result<(), MainError> {
     file.read_to_end(&mut buf)?;
     info!("Read {} bytes from file", buf.len());
 
-    let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+    let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
     let num_bytes_per_channel = 150;
 
     let mut cursor = 0;
     loop {
-        for _ in 0..config.nc {
-            if cursor >= buf.len() {
-                return Ok(());
-            }
-
-            let slice = &buf[cursor..cursor + num_bytes_per_channel];
-            let mut reader = BufferReader::new();
-            let side_info = side_info_reader::read(slice, &mut reader, config.fs_ind, config.ne)
-                .map_err(|e| MainError::SideInfo(cursor, e))?;
-            println!("{:#?}", &side_info);
-            println!();
-
-            cursor += num_bytes_per_channel;
+        if cursor >= buf.len() {
+            return Ok(());
         }
+
+        let slice = &buf[cursor..cursor + num_bytes_per_channel];
+        let mut reader = BufferReader::new();
+        let side_info = side_info_reader::read(slice, &mut reader, config.fs_ind, config.ne)
+            .map_err(|e| MainError::SideInfo(cursor, e))?;
+        println!("{:#?}", &side_info);
+        println!();
+
+        cursor += num_bytes_per_channel;
     }
 }

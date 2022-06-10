@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn noise_level_estimation_run() {
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let estimator = NoiseLevelEstimation::new(config.n_ms, config.ne);
         #[rustfmt::skip]
         let x_f = [

@@ -79,15 +79,8 @@ impl TemporalNoiseShaping {
 
     fn compute_normalized_autocorrelation(sub_start: &[usize], sub_stop: &[usize], x_s: &[Scaler]) -> [Scaler; 9] {
         let lag_window = [
-            1.0,
-            0.9980280260203829,
-            0.9921354055113971,
-            0.9823915844707989,
-            0.9689107911912967,
-            0.9518498073692735,
-            0.9314049334023056,
-            0.9078082299969592,
-            0.8813231366694713,
+            1.0, 0.9980280260203829, 0.9921354055113971, 0.9823915844707989, 0.9689107911912967, 0.9518498073692735,
+            0.9314049334023056, 0.9078082299969592, 0.8813231366694713,
         ];
 
         let mut r = [0.0; 9];
@@ -364,7 +357,7 @@ mod tests {
     #[rustfmt::skip]
     #[test]
     fn temporal_noise_shaping_run() {
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let tns = TemporalNoiseShaping::new(config);
         let mut x_s = [
             2511.287, -3606.8093, -453.28122, -360.71924, -2574.9756, -3166.2068, 6525.6, 6284.0137, -10303.951,

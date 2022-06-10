@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn modified_dct_encode() {
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let mut integer_buf = [0; 960];
         let mut complex_buf = [Complex { r: 0.0, i: 0.0 }; 960];
         let mut output = [0.0; 480];

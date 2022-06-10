@@ -11,7 +11,7 @@ fn main() {
     SimpleLogger::new().init().unwrap();
     let sampling_frequency = SamplingFrequency::Hz48000;
     let frame_duration = FrameDuration::TenMs;
-    let config = Lc3Config::new(sampling_frequency, frame_duration, 1);
+    let config = Lc3Config::new(sampling_frequency, frame_duration);
     let (scaler_length, complex_length) = Lc3Decoder::<1>::calc_working_buffer_lengths(&config);
     let mut scaler_buf = vec![0.0; scaler_length];
     let mut complex_buf = vec![Complex::new(0., 0.); complex_length];

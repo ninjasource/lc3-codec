@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn bandwidth_detector_run() {
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let detector = BandwidthDetector::new(config.n_ms, config.fs_ind);
         #[rustfmt::skip]
         let e_b = [

@@ -473,7 +473,7 @@ mod tests {
 
     #[test]
     fn long_term_post_filter_run() {
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let mut scaler_buf = [0.; 562];
         let mut integer_buf = [0; 540];
         let (mut post, _, _) = LongTermPostFilter::new(config, &mut scaler_buf, &mut integer_buf);
@@ -517,7 +517,7 @@ mod tests {
 
     #[test]
     fn long_term_post_filter_active() {
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let mut scaler_buf = [0.; 562];
         let mut integer_buf = [0; 540];
         let (mut post, _, _) = LongTermPostFilter::new(config, &mut scaler_buf, &mut integer_buf);

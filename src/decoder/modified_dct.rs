@@ -173,7 +173,6 @@ mod tests {
     #[test]
     fn modified_dct_decode() {
         let config = Lc3Config {
-            nc: 1,
             fs_ind: 4,
             fs: 48000,
             ne: 400,

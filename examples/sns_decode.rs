@@ -4,7 +4,7 @@ use lc3_codec::{
 };
 
 pub fn main() {
-    let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+    let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
     let sns_vq = SnsVq {
         ind_lf: 4,
         ind_hf: 23,

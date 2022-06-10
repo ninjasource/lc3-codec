@@ -22,8 +22,7 @@ use num_traits::real::Real;
 #[derive(Debug)]
 pub enum Lc3EncoderError {}
 
-pub struct Lc3Encoder<'a, const NUM_CHANNELS: usize> {
-    config: Lc3Config,
+pub struct Lc3Encoder<'a, const NUM_CHANNELS: usize = 2> {
     channels: Vec<EncoderChannel<'a>, NUM_CHANNELS>,
 }
 
@@ -79,42 +78,21 @@ impl<'a> EncoderChannel<'a> {
 
         // spectral quantization
         let spec = self.spectral_quantization.run(
-            spec_lines,
-            self.spec_quant_out,
-            nbits,
-            bandwidth.nbits_bandwidth,
-            tns.nbits_tns,
-            post_filter.nbits_ltpf,
+            spec_lines, self.spec_quant_out, nbits, bandwidth.nbits_bandwidth, tns.nbits_tns, post_filter.nbits_ltpf,
         );
 
         // residual bits
         let residual_bits = self.residual.encode(
-            spec.nbits_spec,
-            spec.nbits_trunc,
-            self.config.ne,
-            spec.gg,
-            spec_lines,
-            self.spec_quant_out,
+            spec.nbits_spec, spec.nbits_trunc, self.config.ne, spec.gg, spec_lines, self.spec_quant_out,
         );
 
         // noise level estimation
         let noise_factor = self.noise_level_estimation.calc_noise_factor(
-            spec_lines,
-            self.spec_quant_out,
-            bandwidth.bandwidth_ind,
-            spec.gg as Scaler,
+            spec_lines, self.spec_quant_out, bandwidth.bandwidth_ind, spec.gg as Scaler,
         );
 
         self.bitstream_encoding.encode(
-            bandwidth,
-            sns,
-            tns,
-            post_filter,
-            spec,
-            residual_bits,
-            noise_factor,
-            self.spec_quant_out,
-            buf_out,
+            bandwidth, sns, tns, post_filter, spec, residual_bits, noise_factor, self.spec_quant_out, buf_out,
         );
 
         Ok(())
@@ -134,7 +112,7 @@ impl<'a, const NUM_CHANNELS: usize> Lc3Encoder<'a, NUM_CHANNELS> {
         let mut scaler_buf_save = scaler_buf;
         let mut complex_buf_save = complex_buf;
 
-        for _ in 0..config.nc {
+        for _ in 0..NUM_CHANNELS {
             let (mdct, integer_buf, complex_buf) = ModDiscreteCosTrans::new(config, integer_buf_save, complex_buf_save);
             let bandwidth_detector = BandwidthDetector::new(config.n_ms, config.fs_ind);
             let attack_detector = AttackDetector::new(config);
@@ -174,7 +152,7 @@ impl<'a, const NUM_CHANNELS: usize> Lc3Encoder<'a, NUM_CHANNELS> {
             complex_buf_save = complex_buf;
         }
 
-        Self { config, channels }
+        Self { channels }
     }
 
     pub fn encode_frame(
@@ -183,13 +161,13 @@ impl<'a, const NUM_CHANNELS: usize> Lc3Encoder<'a, NUM_CHANNELS> {
         samples_in: &[i16],
         buf_out: &mut [u8],
     ) -> Result<(), Lc3EncoderError> {
-        if channel_index < self.config.nc {
+        if channel_index < NUM_CHANNELS {
             let channel = &mut self.channels[channel_index];
             channel.encode(samples_in, buf_out)
         } else {
             panic!(
                 "Cannot decode channel index {} as config only specifies {} channels",
-                channel_index, self.config.nc
+                channel_index, NUM_CHANNELS
             );
         }
     }
@@ -201,9 +179,9 @@ impl<'a, const NUM_CHANNELS: usize> Lc3Encoder<'a, NUM_CHANNELS> {
         let scaler_len = ltpf_scaler_len + config.nf + config.nb;
         let integer_len = mdct_integer_len + ltpf_integer_len + config.ne;
         (
-            integer_len * config.nc,
-            scaler_len * config.nc,
-            mdct_complex_len * config.nc,
+            integer_len * NUM_CHANNELS,
+            scaler_len * NUM_CHANNELS,
+            mdct_complex_len * NUM_CHANNELS,
         )
     }
 }
@@ -216,7 +194,7 @@ mod tests {
 
     #[test]
     fn lc3_encode_channel() {
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let mut integer_buf = [0; 1900];
         let mut scaler_buf = [0.0; 2034];
         let mut complex_buf = [Complex::new(0.0, 0.0); 960];

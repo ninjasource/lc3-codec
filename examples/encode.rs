@@ -50,19 +50,19 @@ fn encode_wav_to_lc3(
     let mut file_out = File::create(lc3_file_name)?;
 
     let wav_header = wav::read_header(&buf_in_full)?;
-    let config = Lc3Config::new(sampling_frequency, frame_duration, num_channels);
+    let config = Lc3Config::new(sampling_frequency, frame_duration);
 
     let (integer_length, scaler_length, complex_length) = Lc3Encoder::<2>::calc_working_buffer_lengths(&config);
     let mut integer_buf = vec![0; integer_length];
     let mut scaler_buf = vec![0.0; scaler_length];
     let mut complex_buf = vec![Complex::new(0., 0.); complex_length];
 
-    let bytes_per_frame = config.nf * config.nc * num_bits_per_audio_sample / 8;
+    let bytes_per_frame = config.nf * num_channels * num_bits_per_audio_sample / 8;
 
     let mut encoder = Lc3Encoder::<2>::new(config.clone(), &mut integer_buf, &mut scaler_buf, &mut complex_buf);
 
-    let mut samples_in_temp = vec![0; config.nf * config.nc];
-    let mut samples_in = vec![0; config.nf * config.nc];
+    let mut samples_in_temp = vec![0; config.nf * num_channels];
+    let mut samples_in = vec![0; config.nf * num_channels];
 
     let mut buf_out = vec![0; num_bytes_per_channel];
 
@@ -91,15 +91,15 @@ fn encode_wav_to_lc3(
         }
 
         // reshuffle samples so that all samples for a channel are contiguous
-        for ch in 0..config.nc {
+        for ch in 0..num_channels {
             for i in 0..config.nf {
-                let in_index = i * config.nc + ch;
+                let in_index = i * num_channels + ch;
                 let out_index = config.nf * ch + i;
                 samples_in[out_index] = samples_in_temp[in_index];
             }
         }
 
-        for ch in 0..config.nc {
+        for ch in 0..num_channels {
             encoder
                 .encode_frame(
                     ch,
