@@ -1,7 +1,7 @@
 use core::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 pub type Scaler = f32;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Complex {
     pub r: Scaler,
     pub i: Scaler,

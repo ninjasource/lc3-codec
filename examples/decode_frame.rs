@@ -1,7 +1,7 @@
 use lc3_codec::{
     common::{
         complex::Complex,
-        config::{FrameDuration, Lc3Config, SamplingFrequency},
+        config::{FrameDuration, SamplingFrequency},
     },
     decoder::lc3_decoder::Lc3Decoder,
 };
@@ -9,15 +9,17 @@ use simple_logger::SimpleLogger;
 
 fn main() {
     SimpleLogger::new().init().unwrap();
+    let num_channels = 2;
     let sampling_frequency = SamplingFrequency::Hz48000;
     let frame_duration = FrameDuration::TenMs;
-    let config = Lc3Config::new(sampling_frequency, frame_duration);
-    let (scaler_length, complex_length) = Lc3Decoder::<1>::calc_working_buffer_lengths(&config);
+    let (scaler_length, complex_length) =
+        Lc3Decoder::calc_working_buffer_lengths(num_channels, frame_duration, sampling_frequency);
     let mut scaler_buf = vec![0.0; scaler_length];
-    let mut complex_buf = vec![Complex::new(0., 0.); complex_length];
-
-    let mut decoder = Lc3Decoder::<2>::new(config.clone(), &mut scaler_buf, &mut complex_buf);
-    let mut samples_out = [0; 480];
+    let mut complex_buf = vec![Complex::default(); complex_length];
+    let mut decoder = Lc3Decoder::new(
+        num_channels, frame_duration, sampling_frequency, &mut scaler_buf, &mut complex_buf,
+    );
+    let mut samples_out = vec![0; 480];
 
     // slow
     let buf_in: [u8; 150] = [

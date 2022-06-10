@@ -55,7 +55,7 @@ fn encode_wav_to_lc3(
     let (integer_length, scaler_length, complex_length) = Lc3Encoder::<2>::calc_working_buffer_lengths(&config);
     let mut integer_buf = vec![0; integer_length];
     let mut scaler_buf = vec![0.0; scaler_length];
-    let mut complex_buf = vec![Complex::new(0., 0.); complex_length];
+    let mut complex_buf = vec![Complex::default(); complex_length];
 
     let bytes_per_frame = config.nf * num_channels * num_bits_per_audio_sample / 8;
 

@@ -34,3 +34,7 @@ lto = true # better optimizations
 #[[bench]]
 #name = "modified_dct_decode"
 #harness = false
+
+[features]
+default = ["alloc"]
+alloc = []

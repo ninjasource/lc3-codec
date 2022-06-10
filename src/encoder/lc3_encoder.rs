@@ -197,7 +197,7 @@ mod tests {
         let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
         let mut integer_buf = [0; 1900];
         let mut scaler_buf = [0.0; 2034];
-        let mut complex_buf = [Complex::new(0.0, 0.0); 960];
+        let mut complex_buf = [Complex::default(); 960];
 
         let mut encoder = Lc3Encoder::<1>::new(config, &mut integer_buf, &mut scaler_buf, &mut complex_buf);
         let samples_in = [

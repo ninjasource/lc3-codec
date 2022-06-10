@@ -39,7 +39,7 @@ pub struct Lc3Config {
 }
 
 impl Lc3Config {
-    pub fn new(sampling_frequency: SamplingFrequency, frame_duration: FrameDuration) -> Self {
+    pub const fn new(sampling_frequency: SamplingFrequency, frame_duration: FrameDuration) -> Self {
         let (fs_ind, fs) = match sampling_frequency {
             SamplingFrequency::Hz8000 => (0, 8000),
             SamplingFrequency::Hz16000 => (1, 16000),

@@ -150,7 +150,7 @@ impl<'a> ModDiscreteCosTrans<'a> {
         freq_buf[(nf - z)..nf].copy_from_slice(&self.t_hat_mdct[nf..(nf + z)]);
     }
 
-    pub fn calc_working_buffer_length(config: &Lc3Config) -> (usize, usize) {
+    pub const fn calc_working_buffer_length(config: &Lc3Config) -> (usize, usize) {
         let dct_complex_length = DiscreteCosTransformIv::calc_working_buffer_length(config);
         let mem_ola_add_length = config.nf - config.z;
         let t_hat_mdct_length = config.nf * 2;
@@ -168,23 +168,16 @@ impl<'a> ModDiscreteCosTrans<'a> {
 mod tests {
     extern crate std;
     use super::*;
-    use crate::common::config::FrameDuration;
+    use crate::common::config::{FrameDuration, SamplingFrequency};
 
     #[test]
     fn modified_dct_decode() {
-        let config = Lc3Config {
-            fs_ind: 4,
-            fs: 48000,
-            ne: 400,
-            n_ms: FrameDuration::TenMs,
-            nb: 64,
-            nf: 480,
-            z: 180,
-        };
-        let mut scaler_buf = [0f32; 2700];
-        let mut complex_buf = [Complex { r: 0., i: 0. }; 960];
-        let (mut mdct, _, _) = ModDiscreteCosTrans::new(config, &mut scaler_buf, &mut complex_buf);
-        let mut freq_buf = [0.0; 480];
+        const CONFIG: Lc3Config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
+        const SCALER_COMPLEX_LENS: (usize, usize) = ModDiscreteCosTrans::calc_working_buffer_length(&CONFIG);
+        let mut scaler_buf = [0f32; SCALER_COMPLEX_LENS.0];
+        let mut complex_buf = [Complex { r: 0., i: 0. }; SCALER_COMPLEX_LENS.1];
+        let (mut mdct, _, _) = ModDiscreteCosTrans::new(CONFIG, &mut scaler_buf, &mut complex_buf);
+        let mut freq_buf = [0.0; CONFIG.nf];
 
         // since the modified dct result is based on some data from the previous frame we need to plocess two frames in our test
         #[rustfmt::skip]

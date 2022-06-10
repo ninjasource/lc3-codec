@@ -37,7 +37,7 @@ impl<'a> PacketLossConcealment<'a> {
         )
     }
 
-    pub fn calc_working_buffer_length(config: &Lc3Config) -> usize {
+    pub const fn calc_working_buffer_length(config: &Lc3Config) -> usize {
         config.ne
     }
 

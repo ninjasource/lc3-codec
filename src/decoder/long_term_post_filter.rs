@@ -101,9 +101,18 @@ impl<'a> LongTermPostFilter<'a> {
         )
     }
 
-    fn get_buffer_lengths(config: &Lc3Config) -> LongTermPostFilterBufferLengths {
-        let l_den = (config.fs as f64 / 4000.0).ceil() as usize;
-        let l_den = l_den.max(4);
+    const fn get_buffer_lengths(config: &Lc3Config) -> LongTermPostFilterBufferLengths {
+        // TODO: would probably be nicer to use the SamplingFrequency enum to avoid the unreachable branch
+        let l_den = match config.fs {
+            8000 => 4,
+            16000 => 4,
+            24000 => 6,
+            32000 => 8,
+            44100 => 11,
+            48000 => 12,
+            _ => unreachable!(),
+        };
+
         let l_num = l_den - 2;
 
         let (num_mem_blocks, norm) = match config.n_ms {
@@ -124,7 +133,7 @@ impl<'a> LongTermPostFilter<'a> {
         }
     }
 
-    pub fn calc_working_buffer_length(config: &Lc3Config) -> usize {
+    pub const fn calc_working_buffer_length(config: &Lc3Config) -> usize {
         let len = Self::get_buffer_lengths(config);
         len.c_den * 3 + len.c_num * 2 + len.x_hat_ltpf_mem + len.x_hat_mem + len.scratch
     }
@@ -423,9 +432,10 @@ mod tests {
 
     #[test]
     fn long_term_post_filter_activated() {
-        let mut scaler_buf = [0.; 3000];
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
-        let (mut post_filter, _) = LongTermPostFilter::new(config, &mut scaler_buf);
+        const CONFIG: Lc3Config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
+        const SCALER_LEN: usize = LongTermPostFilter::calc_working_buffer_length(&CONFIG);
+        let mut scaler_buf = [0.; SCALER_LEN];
+        let (mut post_filter, _) = LongTermPostFilter::new(CONFIG, &mut scaler_buf);
         #[rustfmt::skip]
         let mut freq_samples = [
             9855.562, 9917.566, 10005.261, 10120.888, 10234.55, 10361.796, 10491.287, 10620.813, 10750.864, 10872.629,
@@ -492,9 +502,10 @@ mod tests {
 
     #[test]
     fn long_term_post_filter_full_cycle() {
-        let mut scaler_buf = [0.; 3000];
-        let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
-        let (mut post_filter, _) = LongTermPostFilter::new(config, &mut scaler_buf);
+        const CONFIG: Lc3Config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
+        const SCALER_LEN: usize = LongTermPostFilter::calc_working_buffer_length(&CONFIG);
+        let mut scaler_buf = [0.; SCALER_LEN];
+        let (mut post_filter, _) = LongTermPostFilter::new(CONFIG, &mut scaler_buf);
 
         // Inactive - transition case 1
         let info = LongTermPostFilterInfo::new(false, true, 134);

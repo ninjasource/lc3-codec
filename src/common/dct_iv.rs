@@ -66,7 +66,7 @@ impl<'a> DiscreteCosTransformIv<'a> {
         }
     }
 
-    pub fn calc_working_buffer_length(config: &Lc3Config) -> usize {
+    pub const fn calc_working_buffer_length(config: &Lc3Config) -> usize {
         config.nf / 2 * 4
     }
 }
@@ -185,7 +185,7 @@ mod tests {
             -902.1443, 762.0443, -497.40417, 175.34583, 176.48462, -502.2439, 762.06104, -865.8496, 877.19336,
             -760.2788, 492.2058, -167.54333, -172.98795, 506.0147, -742.92, 872.8751,
         ];
-        let mut complex_buf = [Complex::new(0.0, 0.0); 960];
+        let mut complex_buf = [Complex::default(); 960];
         let (mut dct_iv, _) = DiscreteCosTransformIv::new(480, &mut complex_buf);
 
         dct_iv.run(&mut buf);

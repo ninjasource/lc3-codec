@@ -259,7 +259,7 @@ impl<'a> KissFastFourierTransform<'a> {
         let mut k;
 
         // TODO: use a dynamic buffer somehow
-        let mut scratch = [Complex::new(0., 0.); 480];
+        let mut scratch = [Complex::default(); 480];
 
         for u in 0..m {
             k = u;

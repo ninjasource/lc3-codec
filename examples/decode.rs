@@ -47,18 +47,19 @@ fn decode_lc3_to_wav(
     file.read_to_end(&mut buf_in_full)?;
     info!("Read {} bytes from file", buf_in_full.len());
 
-    let config = Lc3Config::new(sampling_frequency, frame_duration);
-
-    let (scaler_length, complex_length) = Lc3Decoder::<2>::calc_working_buffer_lengths(&config);
+    let (scaler_length, complex_length) =
+        Lc3Decoder::calc_working_buffer_lengths(num_channels, frame_duration, sampling_frequency);
     let mut scaler_buf = vec![0.0; scaler_length]; // 9942
-    let mut complex_buf = vec![Complex::new(0., 0.); complex_length]; // 1920
-
+    let mut complex_buf = vec![Complex::default(); complex_length]; // 1920
     let num_bytes_per_channel = num_bytes_per_channel; // 150 = 240 kbps for 2 channels, 120 kbps for 1 channel
-    let mut decoder = Lc3Decoder::<2>::new(config.clone(), &mut scaler_buf, &mut complex_buf);
+    let mut decoder = Lc3Decoder::new(
+        num_channels, frame_duration, sampling_frequency, &mut scaler_buf, &mut complex_buf,
+    );
 
     let mut in_cursor = 0;
     let mut out_cursor = FULL_WAV_HEADER_LEN;
 
+    let config = Lc3Config::new(sampling_frequency, frame_duration);
     let mut samples_out_by_channel = vec![vec![0_i16; config.nf]; num_channels];
     let mut samples_out_interleved = vec![0_i16; num_channels * config.nf];
 
