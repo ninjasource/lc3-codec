@@ -1,6 +1,9 @@
 // Copyright 2022 David Haig
 // Licensed under the Apache License, Version 2.0 (the "License");
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 use super::{
     attack_detector::AttackDetector, bandwidth_detector::BandwidthDetector, bitstream_encoding::BitstreamEncoding,
     long_term_post_filter::LongTermPostFilter, modified_dct::ModDiscreteCosTrans,

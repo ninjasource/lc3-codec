@@ -1,11 +1,16 @@
 // Copyright 2022 David Haig
 // Licensed under the Apache License, Version 2.0 (the "License");
 
+// If the `alloc` feature is enabled (which it is by default) then the
+// Lc3Decoder can be initialised dynamically (with variable inputs not known at compile time)
+// However, if the `alloc` feature is not enabled (e.g. with `default-features = false`) then
+// the Lc3Decoder will be initialised statically with constants like number of channels specified
+// at compile time. This suits microcontroller environments.
+// There should be no performance difference between using alloc and not because memory is preallocated
+// before the decoder starts using it and the same memory gets used over and over again.
+
 #[cfg(feature = "alloc")]
 extern crate alloc;
-
-#[cfg(not(feature = "alloc"))]
-use heapless::Vec;
 
 use super::{
     arithmetic_codec::{self, ArithmeticData, ArithmeticDecodeError},
@@ -42,16 +47,16 @@ pub struct OutputBufferErrorDetails {
     pub actual_length: usize,
 }
 
-#[cfg(not(feature = "alloc"))]
-pub struct Lc3Decoder<'a, const NUM_CHANNELS: usize = 2> {
-    config: Lc3Config,
-    channels: heapless::Vec<DecoderChannel<'a>, NUM_CHANNELS>,
-}
-
 #[cfg(feature = "alloc")]
 pub struct Lc3Decoder<'a> {
     config: Lc3Config,
     channels: alloc::vec::Vec<DecoderChannel<'a>>,
+}
+
+#[cfg(not(feature = "alloc"))]
+pub struct Lc3Decoder<'a, const NUM_CHANNELS: usize = 2> {
+    config: Lc3Config,
+    channels: heapless::Vec<DecoderChannel<'a>, NUM_CHANNELS>,
 }
 
 struct DecoderChannel<'a> {
@@ -171,71 +176,6 @@ fn read_frame(buf: &[u8], config: &Lc3Config, x: &mut [i32]) -> Result<(SideInfo
     Ok((side_info, arithmetic_data))
 }
 
-#[cfg(not(feature = "alloc"))]
-impl<'a, const NUM_CHANNELS: usize> Lc3Decoder<'a, NUM_CHANNELS> {
-    pub fn new(
-        frame_duration: FrameDuration,
-        sampling_frequency: SamplingFrequency,
-        scaler_buf: &'a mut [Scaler],
-        complex_buf: &'a mut [Complex],
-    ) -> Self {
-        let config = Lc3Config::new(sampling_frequency, frame_duration);
-        let mut channels: Vec<DecoderChannel<'a>, NUM_CHANNELS> = Vec::new();
-        let mut scaler_buf_saved = scaler_buf;
-        let mut complex_buf_saved = complex_buf;
-
-        for _ in 0..NUM_CHANNELS {
-            let (x_hat, scaler_buf) = scaler_buf_saved.split_at_mut(config.ne);
-            let (packet_loss, scaler_buf) = PacketLossConcealment::new(config.ne, scaler_buf);
-            let (mdct, scaler_buf, complex_buf) = ModDiscreteCosTrans::new(config, scaler_buf, complex_buf_saved);
-            let (post_filter, scaler_buf) = LongTermPostFilter::new(config, scaler_buf);
-            let (freq_buf, scaler_buf) = scaler_buf.split_at_mut(config.nf);
-
-            let channel = DecoderChannel {
-                spec_lines: x_hat,
-                packet_loss,
-                modified_dct: mdct,
-                post_filter,
-                frame_index: 0,
-                freq_samples: freq_buf,
-            };
-
-            channels.push(channel).ok();
-            scaler_buf_saved = scaler_buf;
-            complex_buf_saved = complex_buf;
-        }
-
-        Self { config, channels }
-    }
-
-    pub fn decode_frame(
-        &mut self,
-        num_bits_per_audio_sample: usize, // should be 16
-        channel_index: usize,
-        buf_in: &[u8],
-        samples_out: &mut [i16],
-    ) -> Result<(), Lc3DecoderError> {
-        if channel_index < NUM_CHANNELS {
-            let channel = &mut self.channels[channel_index];
-            channel.decode(&self.config, num_bits_per_audio_sample, buf_in, samples_out)
-        } else {
-            panic!(
-                "Cannot decode channel index {} as config only specifies {} channels",
-                channel_index, NUM_CHANNELS
-            );
-        }
-    }
-
-    pub const fn calc_working_buffer_lengths(
-        frame_duration: FrameDuration,
-        sampling_frequency: SamplingFrequency,
-    ) -> (usize, usize) {
-        let config = Lc3Config::new(sampling_frequency, frame_duration);
-        let (scaler_length, complex_length) = DecoderChannel::calc_working_buffer_lengths(&config);
-        (NUM_CHANNELS * scaler_length, NUM_CHANNELS * complex_length)
-    }
-}
-
 #[cfg(feature = "alloc")]
 impl<'a> Lc3Decoder<'a> {
     pub fn new(
@@ -301,6 +241,71 @@ impl<'a> Lc3Decoder<'a> {
         let config = Lc3Config::new(sampling_frequency, frame_duration);
         let (scaler_length, complex_length) = DecoderChannel::calc_working_buffer_lengths(&config);
         (num_channels * scaler_length, num_channels * complex_length)
+    }
+}
+
+#[cfg(not(feature = "alloc"))]
+impl<'a, const NUM_CHANNELS: usize> Lc3Decoder<'a, NUM_CHANNELS> {
+    pub fn new(
+        frame_duration: FrameDuration,
+        sampling_frequency: SamplingFrequency,
+        scaler_buf: &'a mut [Scaler],
+        complex_buf: &'a mut [Complex],
+    ) -> Self {
+        let config = Lc3Config::new(sampling_frequency, frame_duration);
+        let mut channels: heapless::Vec<DecoderChannel<'a>, NUM_CHANNELS> = heapless::Vec::new();
+        let mut scaler_buf_saved = scaler_buf;
+        let mut complex_buf_saved = complex_buf;
+
+        for _ in 0..NUM_CHANNELS {
+            let (x_hat, scaler_buf) = scaler_buf_saved.split_at_mut(config.ne);
+            let (packet_loss, scaler_buf) = PacketLossConcealment::new(config.ne, scaler_buf);
+            let (mdct, scaler_buf, complex_buf) = ModDiscreteCosTrans::new(config, scaler_buf, complex_buf_saved);
+            let (post_filter, scaler_buf) = LongTermPostFilter::new(config, scaler_buf);
+            let (freq_buf, scaler_buf) = scaler_buf.split_at_mut(config.nf);
+
+            let channel = DecoderChannel {
+                spec_lines: x_hat,
+                packet_loss,
+                modified_dct: mdct,
+                post_filter,
+                frame_index: 0,
+                freq_samples: freq_buf,
+            };
+
+            channels.push(channel).ok();
+            scaler_buf_saved = scaler_buf;
+            complex_buf_saved = complex_buf;
+        }
+
+        Self { config, channels }
+    }
+
+    pub fn decode_frame(
+        &mut self,
+        num_bits_per_audio_sample: usize, // should be 16
+        channel_index: usize,
+        buf_in: &[u8],
+        samples_out: &mut [i16],
+    ) -> Result<(), Lc3DecoderError> {
+        if channel_index < NUM_CHANNELS {
+            let channel = &mut self.channels[channel_index];
+            channel.decode(&self.config, num_bits_per_audio_sample, buf_in, samples_out)
+        } else {
+            panic!(
+                "Cannot decode channel index {} as config only specifies {} channels",
+                channel_index, NUM_CHANNELS
+            );
+        }
+    }
+
+    pub const fn calc_working_buffer_lengths(
+        frame_duration: FrameDuration,
+        sampling_frequency: SamplingFrequency,
+    ) -> (usize, usize) {
+        let config = Lc3Config::new(sampling_frequency, frame_duration);
+        let (scaler_length, complex_length) = DecoderChannel::calc_working_buffer_lengths(&config);
+        (NUM_CHANNELS * scaler_length, NUM_CHANNELS * complex_length)
     }
 }
 
