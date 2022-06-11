@@ -1,4 +1,9 @@
 {
+    "rust-analyzer.cargo.target": "thumbv7em-none-eabi",
+    "rust-analyzer.checkOnSave.allTargets": false,
+    "rust-analyzer.cargo.noDefaultFeatures": true,
+    "rust-analyzer.cargo.features": [],
+    "rust-analyzer.checkOnSave.features": null,
     "cSpell.words": [
         "flamegraph",
         "mdct"

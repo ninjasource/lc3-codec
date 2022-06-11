@@ -37,4 +37,5 @@ lto = true # better optimizations
 
 [features]
 default = ["alloc"]
+#default = []
 alloc = []

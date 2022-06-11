@@ -49,10 +49,13 @@ fn decode_frame() {
         0x4d, 0xc5, 0x7c,
     ];
 
-    let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
-    let mut scaler_buf = [0f32; 4971];
-    let mut complex_buf = [Complex::new(0f32, 0f32); 960];
-    let mut decoder = Lc3Decoder::<1>::new(config, &mut scaler_buf, &mut complex_buf);
+    const NUM_CH: usize = 1;
+    const FREQ: SamplingFrequency = SamplingFrequency::Hz48000;
+    const DURATION: FrameDuration = FrameDuration::TenMs;
+    const SCALER_COMPLEX_LENS: (usize, usize) = Lc3Decoder::<NUM_CH>::calc_working_buffer_lengths(DURATION, FREQ);
+    let mut scaler_buf = [0.0; SCALER_COMPLEX_LENS.0];
+    let mut complex_buf = [Complex::default(); SCALER_COMPLEX_LENS.1];
+    let mut decoder = Lc3Decoder::<NUM_CH>::new(DURATION, FREQ, &mut scaler_buf, &mut complex_buf);
     let mut samples_out = [0; 480];
 
     let from = uptime();
@@ -92,7 +95,7 @@ fn encode_frame() {
         1959, 1956, 1960, 1955, 1930, 1907, 1884, 1844, 1790, 1733, 1687, 1649, 1611, 1586,
     ];
     let mut buf_out = [0u8; 70];
-    let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs, 1);
+    let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
     let mut integer_buf = [0i16; 1900];
     let mut scaler_buf = [0f32; 1106];
     let mut complex_buf = [Complex::new(0f32, 0f32); 960];

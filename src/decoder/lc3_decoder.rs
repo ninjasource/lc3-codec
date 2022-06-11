@@ -1,6 +1,5 @@
 // Copyright 2022 David Haig
 // Licensed under the Apache License, Version 2.0 (the "License");
-//
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -314,14 +313,13 @@ mod tests {
     #[cfg(not(feature = "alloc"))]
     #[test]
     fn lc3_decode_channel() {
-        const num_channels: usize = 1;
-        const sampling_frequency: SamplingFrequency = SamplingFrequency::Hz48000;
-        const frame_duration: FrameDuration = FrameDuration::TenMs;
-        let (scaler_len, complex_len) =
-            Lc3Decoder::<num_channels>::calc_working_buffer_lengths(sampling_frequency, frame_duration);
-        let mut scaler_buf = [0.0; scaler_len];
-        let mut complex_buf = [Complex::default(); complex_len];
-        let mut decoder = Lc3Decoder::<1>::new(sampling_frequency, frame_duration, &mut scaler_buf, &mut complex_buf);
+        const NUM_CH: usize = 1;
+        const FREQ: SamplingFrequency = SamplingFrequency::Hz48000;
+        const DURATION: FrameDuration = FrameDuration::TenMs;
+        const SCALER_COMPLEX_LENS: (usize, usize) = Lc3Decoder::<NUM_CH>::calc_working_buffer_lengths(DURATION, FREQ);
+        let mut scaler_buf = [0.0; SCALER_COMPLEX_LENS.0];
+        let mut complex_buf = [Complex::default(); SCALER_COMPLEX_LENS.1];
+        let mut decoder = Lc3Decoder::<NUM_CH>::new(DURATION, FREQ, &mut scaler_buf, &mut complex_buf);
         let buf_in = [
             187, 56, 111, 155, 76, 236, 70, 99, 10, 135, 219, 76, 176, 3, 108, 203, 131, 111, 206, 221, 195, 25, 96,
             240, 18, 202, 163, 241, 109, 142, 198, 122, 176, 70, 37, 6, 35, 190, 110, 184, 251, 162, 71, 7, 151, 58,
