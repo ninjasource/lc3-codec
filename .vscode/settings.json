@@ -7,6 +7,8 @@
     // "rust-analyzer.checkOnSave.features": null,
     "cSpell.words": [
         "flamegraph",
-        "mdct"
+        "mdct",
+        "microcontroller",
+        "usize"
     ]
 }

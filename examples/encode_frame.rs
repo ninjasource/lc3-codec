@@ -1,7 +1,7 @@
 use lc3_codec::{
     common::{
         complex::Complex,
-        config::{FrameDuration, Lc3Config, SamplingFrequency},
+        config::{FrameDuration, SamplingFrequency},
     },
     encoder::lc3_encoder::Lc3Encoder,
 };
@@ -9,15 +9,18 @@ use simple_logger::SimpleLogger;
 
 fn main() {
     SimpleLogger::new().init().unwrap();
+    let num_channels = 1;
     let sampling_frequency = SamplingFrequency::Hz48000;
     let frame_duration = FrameDuration::TenMs;
-    let config = Lc3Config::new(sampling_frequency, frame_duration);
-    let (integer_length, scaler_length, complex_length) = Lc3Encoder::<1>::calc_working_buffer_lengths(&config);
+    let (integer_length, scaler_length, complex_length) =
+        Lc3Encoder::calc_working_buffer_lengths(num_channels, frame_duration, sampling_frequency);
     let mut integer_buf = vec![0; integer_length];
     let mut scaler_buf = vec![0.0; scaler_length];
-    let mut complex_buf = vec![Complex::new(0., 0.); complex_length];
-    let mut encoder = Lc3Encoder::<1>::new(config, &mut integer_buf, &mut scaler_buf, &mut complex_buf);
-    let samples_in = [
+    let mut complex_buf = vec![Complex::default(); complex_length];
+    let mut encoder = Lc3Encoder::new(
+        num_channels, frame_duration, sampling_frequency, &mut integer_buf, &mut scaler_buf, &mut complex_buf,
+    );
+    let samples_in = vec![
         836, 739, 638, 510, 352, 200, 72, -56, -177, -297, -416, -520, -623, -709, -791, -911, -1062, -1199, -1298,
         -1375, -1433, -1484, -1548, -1603, -1648, -1687, -1724, -1744, -1730, -1699, -1650, -1613, -1594, -1563, -1532,
         -1501, -1473, -1441, -1409, -1393, -1355, -1280, -1201, -1118, -1032, -953, -860, -741, -613, -477, -355, -261,
@@ -45,7 +48,7 @@ fn main() {
         2095, 2135, 2169, 2193, 2213, 2219, 2202, 2163, 2101, 2033, 1992, 1985, 1990, 1986, 1978, 1977, 1976, 1969,
         1959, 1956, 1960, 1955, 1930, 1907, 1884, 1844, 1790, 1733, 1687, 1649, 1611, 1586,
     ];
-    let mut buf_out: [u8; 150] = [0; 150];
+    let mut buf_out: Vec<u8> = vec![0; 150];
 
     encoder.encode_frame(0, &samples_in, &mut buf_out).unwrap();
 

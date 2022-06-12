@@ -94,17 +94,21 @@ impl<'a> LongTermPostFilter<'a> {
         )
     }
 
-    fn calc_temp_fields(config: &Lc3Config) -> LongTermPostFilterTempFields {
+    const fn calc_temp_fields(config: &Lc3Config) -> LongTermPostFilterTempFields {
         let (len12p8, len6p4, delay_ltpf) = match config.n_ms {
             FrameDuration::TenMs => (128, 64, 24),
             FrameDuration::SevenPointFiveMs => (96, 48, 44),
         };
 
-        let upsampling_factor = if config.fs == 44100 { 4 } else { 192000 / config.fs };
-        let resampling_factor = if config.fs == 8000 { 0.5 } else { 1.0 };
-
-        // e.g. 60 + 480
-        let x_s_extended_length = 240 / upsampling_factor + config.nf;
+        let (upsampling_factor, resampling_factor, x_s_extended_length) = match config.fs {
+            8000 => (24, 0.5, 10 + config.nf),
+            16000 => (12, 1.0, 20 + config.nf),
+            24000 => (8, 1.0, 30 + config.nf),
+            32000 => (6, 1.0, 40 + config.nf),
+            44100 => (4, 1.0, 60 + config.nf),
+            48000 => (4, 1.0, 60 + config.nf),
+            _ => unreachable!(), // TODO: use enum rather to get rid of this
+        };
 
         // 3 * len12p8 for 10ms
         let x_tilde_12p8d_extended_length = len12p8 + delay_ltpf + NMEM_12P8D;
@@ -124,7 +128,7 @@ impl<'a> LongTermPostFilter<'a> {
     }
 
     // returns (integer_len, complex_len)
-    pub fn calc_working_buffer_length(config: &Lc3Config) -> (usize, usize) {
+    pub const fn calc_working_buffer_length(config: &Lc3Config) -> (usize, usize) {
         let tmp = Self::calc_temp_fields(config);
         (
             tmp.x_s_extended_length,

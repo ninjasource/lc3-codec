@@ -64,7 +64,7 @@ impl<'a> ModDiscreteCosTrans<'a> {
         )
     }
 
-    pub fn calc_working_buffer_lengths(config: &Lc3Config) -> (usize, usize) {
+    pub const fn calc_working_buffer_lengths(config: &Lc3Config) -> (usize, usize) {
         let complex_len = DiscreteCosTransformIv::calc_working_buffer_length(config);
         let integer_len = config.nf * 2;
         (integer_len, complex_len)

@@ -9,7 +9,7 @@ use simple_logger::SimpleLogger;
 
 fn main() {
     SimpleLogger::new().init().unwrap();
-    let num_channels = 2;
+    let num_channels = 1;
     let sampling_frequency = SamplingFrequency::Hz48000;
     let frame_duration = FrameDuration::TenMs;
     let (scaler_length, complex_length) =
@@ -19,10 +19,10 @@ fn main() {
     let mut decoder = Lc3Decoder::new(
         num_channels, frame_duration, sampling_frequency, &mut scaler_buf, &mut complex_buf,
     );
-    let mut samples_out = vec![0; 480];
+    let mut samples_out: Vec<i16> = vec![0; 480];
 
     // slow
-    let buf_in: [u8; 150] = [
+    let buf_in: Vec<u8> = vec![
         187, 56, 111, 155, 76, 236, 70, 99, 10, 135, 219, 76, 176, 3, 108, 203, 131, 111, 206, 221, 195, 25, 96, 240,
         18, 202, 163, 241, 109, 142, 198, 122, 176, 70, 37, 6, 35, 190, 110, 184, 251, 162, 71, 7, 151, 58, 42, 79,
         200, 192, 99, 157, 234, 156, 245, 43, 84, 64, 167, 32, 52, 106, 43, 75, 4, 102, 213, 123, 168, 120, 213, 252,
