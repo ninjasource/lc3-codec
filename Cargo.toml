@@ -7,7 +7,7 @@ license = "Apache-2.0"
 repository = "https://github.com/ninjasource/lc3-codec.git"
 description = "An implementation of the LC3 audio codec for embedded systems (no_std)"
 keywords = ["lc3", "audio", "embedded", "no_std"]
-categories = ["embedded", "no-std", "multimedia"]
+categories = ["embedded", "no-std", "multimedia.categories.audio"]
 readme = "README.md"
 
 [dependencies]
