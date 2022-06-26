@@ -11,7 +11,7 @@ use cortex_m_semihosting::{debug, hprintln};
 use lc3_codec::{
     common::{
         complex::Complex,
-        config::{FrameDuration, Lc3Config, SamplingFrequency},
+        config::{FrameDuration, SamplingFrequency},
     },
     decoder::lc3_decoder::Lc3Decoder,
     encoder::lc3_encoder::Lc3Encoder,
@@ -95,11 +95,14 @@ fn encode_frame() {
         1959, 1956, 1960, 1955, 1930, 1907, 1884, 1844, 1790, 1733, 1687, 1649, 1611, 1586,
     ];
     let mut buf_out = [0u8; 70];
-    let config = Lc3Config::new(SamplingFrequency::Hz48000, FrameDuration::TenMs);
-    let mut integer_buf = [0i16; 1900];
-    let mut scaler_buf = [0f32; 1106];
-    let mut complex_buf = [Complex::new(0f32, 0f32); 960];
-    let mut encoder = Lc3Encoder::<1>::new(config, &mut integer_buf, &mut scaler_buf, &mut complex_buf);
+    const NUM_CH: usize = 1;
+    const DURATION: FrameDuration = FrameDuration::TenMs;
+    const FREQ: SamplingFrequency = SamplingFrequency::Hz48000;
+    const BUF_LENGTHS: (usize, usize, usize) = Lc3Encoder::<NUM_CH>::calc_working_buffer_lengths(DURATION, FREQ);
+    let mut integer_buf = [0; BUF_LENGTHS.0];
+    let mut scaler_buf = [0.0; BUF_LENGTHS.1];
+    let mut complex_buf = [Complex::default(); BUF_LENGTHS.2];
+    let mut encoder = Lc3Encoder::<NUM_CH>::new(DURATION, FREQ, &mut integer_buf, &mut scaler_buf, &mut complex_buf);
 
     let from = uptime();
     encoder.encode_frame(0, &samples_in, &mut buf_out).unwrap();
