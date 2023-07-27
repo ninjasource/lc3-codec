@@ -125,7 +125,7 @@ On a PC:
 The decoder can decode `60 minutes` of compressed mono audio in `5 seconds` on one core of a `i7-6700K` CPU @ 4.00GHz
 
 On a microcontroller:
-The decoder can decode `10 ms` of audio (one frame) in `5.4 ms` on a Nordic `nrf52840` Cortex M4F MCU running at 72mhz
+The decoder can decode `10 ms` of audio (one frame) in `5.4 ms` on a Nordic `nrf52840` Cortex M4F MCU running at 64mhz
 
 The decoder uses `27,564` bytes of ram for its working buffers
 
